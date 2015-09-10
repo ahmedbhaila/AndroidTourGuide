@@ -1,5 +1,7 @@
 package mycompany.com.mytourguide;
 
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
@@ -9,6 +11,7 @@ import android.view.MenuItem;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.util.ArrayList;
@@ -21,6 +24,7 @@ public class MainActivity extends FragmentActivity implements
 
     protected GoogleApiClient mGoogleApiClient;
     protected ArrayList<Geofence> mGeofenceList;
+    private PendingIntent mGeofencePendingIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,9 +45,35 @@ public class MainActivity extends FragmentActivity implements
                 .addApi(LocationServices.API)
                 .build();
     }
+
+    private GeofencingRequest getGeofencingRequest() {
+        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
+        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+        builder.addGeofences(mGeofenceList);
+        return builder.build();
+    }
+
+
     @Override
     public void onConnected(Bundle connectionHint) {
+        mGeofencePendingIntent = getGeofencePendingIntent();
         Log.i(TAG, "Connected to GoogleApiClient");
+    }
+
+    private PendingIntent getGeofencePendingIntent() {
+        // Reuse the PendingIntent if we already have it.
+        if (mGeofencePendingIntent != null) {
+            return mGeofencePendingIntent;
+        }
+        Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
+        PendingIntent pIntent = PendingIntent.getService(this, 0, intent, PendingIntent.
+                FLAG_UPDATE_CURRENT);
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
+        // calling addGeofences() and removeGeofences().
+        LocationServices.GeofencingApi.addGeofences(mGoogleApiClient, getGeofencingRequest(),pIntent);
+
+        return PendingIntent.getService(this, 0, intent, PendingIntent.
+                FLAG_UPDATE_CURRENT);
     }
 
     @Override
@@ -104,9 +134,9 @@ public class MainActivity extends FragmentActivity implements
 
                         // Set the circular region of this geofence.
                 .setCircularRegion(
-                        127.0,
-                        87.0,
-                        100
+                        41.969406,
+                        -87.741879,
+                        5000
                 )
 
                         // Set the expiration duration of the geofence. This geofence gets automatically
@@ -116,10 +146,10 @@ public class MainActivity extends FragmentActivity implements
                         // Set the transition types of interest. Alerts are only generated for these
                         // transition. We track entry and exit transitions in this sample.
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
-                            Geofence.GEOFENCE_TRANSITION_EXIT)
+                        Geofence.GEOFENCE_TRANSITION_EXIT)
 
-                            // Create the geofence.
-                    .build());
+                        // Create the geofence.
+                .build());
 
     }
 
